@@ -26,7 +26,7 @@ void conv_simd(const float* in, float* out, const float* ker,
     const int p = K / 2;
     const int in_stride = W + 2 * p;  // padded row stride
     int stride1,stride2;
-
+    
     for (int oy = 0; oy < H; ++oy) {
         for (int ox = 0; ox < W; ox=ox+8) {
             c=_mm256_setzero_ps();

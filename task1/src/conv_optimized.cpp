@@ -13,7 +13,7 @@ void conv_optimized(const float* in, float* out, const float* ker,
     const int p = K / 2;
     const int in_stride = W + 2 * p;
 
-    int b = 128;
+    int b = 192;
 
     for (int oy = 0; oy < H; oy = oy + b) {
         for (int ox = 0; ox < W; ox = ox + b) {

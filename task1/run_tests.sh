@@ -2,6 +2,21 @@
 
 OUTPUT="test_results.csv"
 
+echo "Cleaning previous build..."
+make clean
+
+echo "Building..."
+make
+
+if [ $? -ne 0 ]; then
+    echo "Build failed. Exiting."
+    exit 1
+fi
+
+echo
+echo "Build successful."
+echo
+
 echo "K,size,stage,correct,time_ms,gflops,speedup" > "$OUTPUT"
 
 SIZES=(256 512 1024 2048 4096 8192 16384)

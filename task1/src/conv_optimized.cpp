@@ -19,31 +19,35 @@ void conv_optimized(const float* in, float* out, const float* ker,
     __m256 c4,a4;
     __m256 b;
 
-    for (int oy = 0; oy < H; ++oy) {
+    int oy;
+    for (oy = 0; oy + 3 < H; oy += 4) {
 
-        for (int ox = 0; ox < W; ox += 32) {
+        for (int ox = 0; ox < W; ox += 8) {
 
             c1 = _mm256_setzero_ps();
             c2 = _mm256_setzero_ps();
             c3 = _mm256_setzero_ps();
             c4 = _mm256_setzero_ps();
 
-            for (int j = 0; j < K; ++j) {
+            for (int j = 0; j < K; j++) {
 
-                stride1 = (oy + j) * in_stride;
                 stride2 = j * K;
 
-                for (int i = 0; i < K; ++i) {
+                for (int i = 0; i < K; i++) {
 
                     b = _mm256_set1_ps(ker[stride2 + i]);
 
+                    stride1 = (oy + j) * in_stride;
                     a1 = _mm256_load_ps(&in[stride1 + ox + i]);
 
-                    a2 = _mm256_load_ps(&in[stride1 + ox + 8 + i]);
+                    stride1 = (oy + 1 + j) * in_stride;
+                    a2 = _mm256_load_ps(&in[stride1 + ox + i]);
 
-                    a3 = _mm256_load_ps(&in[stride1 + ox + 16 + i]);
+                    stride1 = (oy + 2 + j) * in_stride;
+                    a3 = _mm256_load_ps(&in[stride1 + ox + i]);
 
-                    a4 = _mm256_load_ps( &in[stride1 + ox + 24 + i]);
+                    stride1 = (oy + 3 + j) * in_stride;
+                    a4 = _mm256_load_ps(&in[stride1 + ox + i]);
 
                     c1 = _mm256_fmadd_ps(a1, b, c1);
                     c2 = _mm256_fmadd_ps(a2, b, c2);
@@ -52,12 +56,36 @@ void conv_optimized(const float* in, float* out, const float* ker,
                 }
             }
 
-            _mm256_store_ps(out + m,c1);
-            _mm256_store_ps(out + m + 8,c2);
-            _mm256_store_ps(out + m + 16,c3);
-            _mm256_store_ps(out + m + 24,c4);
+            m = oy * W + ox;
 
-            m += 32;
+            _mm256_store_ps(&out[m], c1);
+            _mm256_store_ps(&out[m + W], c2);
+            _mm256_store_ps(&out[m + 2 * W], c3);
+            _mm256_store_ps(&out[m + 3 * W], c4);
+        }
+    }
+
+    // remaining rows
+    for (; oy < H; oy++) {
+
+        for (int ox = 0; ox < W; ox += 8) {
+
+            c1 = _mm256_setzero_ps();
+
+            for (int j = 0; j < K; j++) {
+
+                stride1 = (oy + j) * in_stride;
+                stride2 = j * K;
+
+                for (int i = 0; i < K; i++) {
+
+                    a1 = _mm256_load_ps(&in[stride1 + ox + i]);
+                    b = _mm256_set1_ps(ker[stride2 + i]);
+                    c1 = _mm256_fmadd_ps(a1, b, c1);
+                }
+            }
+
+            _mm256_store_ps(&out[oy * W + ox], c1);
         }
     }
 }

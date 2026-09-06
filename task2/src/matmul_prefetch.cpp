@@ -23,7 +23,7 @@ void matmul_prefetch(const float* A, const float* B, float* C,
                     const float *a = A + (long)i * lda;
                     for(int j = start_idx_j; j < end_idx_j; j++){
                         const float *b1 = B + (long)j * ldb;
-                        float sum = (start_idx_k == 0) ? 0.0f : C[(long)i * ldc + j];
+                        /*float sum = (start_idx_k == 0) ? 0.0f : C[(long)i * ldc + j];
                         for(int k = start_idx_k; k < end_idx_k;k++){
                             if(k + PREFETCH_DISTANCE < end_idx_k){
                                 _mm_prefetch((char *)(a + k + PREFETCH_DISTANCE),_MM_HINT_T0);
@@ -31,7 +31,33 @@ void matmul_prefetch(const float* A, const float* B, float* C,
                             }
                             sum += a[k]*b1[k];
                         }
-                        C[(long)i * ldc + j] = sum;
+                        C[(long)i * ldc + j] = sum;*/
+                        int k;
+                        __m256 v_sum = _mm256_setzero_ps();
+                        for(int k = start_idx_k; k + 7 < end_idx_k;k += 8){
+                            if(k + PREFETCH_DISTANCE < end_idx_k){
+                                _mm_prefetch((char *)(a + k + PREFETCH_DISTANCE),_MM_HINT_T0);
+                                _mm_prefetch((char *)(b1 + k + PREFETCH_DISTANCE),_MM_HINT_T0);
+                            }
+                            __m256 va = _mm256_loadu_ps(a + k);
+                            __m256 vb = _mm256_loadu_ps(b1 + k);
+                             v_sum = _mm256_fmadd_ps(va, vb, v_sum);
+                        }
+                        float sum_array[8];
+                        _mm256_storeu_ps(sum_array, v_sum);
+                        float tile_sum = 0;
+                        for(int xi = 0;xi <8;xi++){
+                            tile_sum += sum_array[xi];
+                        }
+                        for (; k < end_idx_k; k++) {
+                            tile_sum += a[k] * b1[k];
+                        }
+                        if (start_idx_k == 0) {
+                            C[(long)i * ldc + j] = tile_sum;
+                        } 
+                        else {
+                            C[(long)i * ldc + j] += tile_sum;
+                        }
                     }
                 }
             }

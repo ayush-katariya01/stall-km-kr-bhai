@@ -20,7 +20,10 @@ echo
 echo "K,size,stage,correct,time_ms,gflops,speedup" > "$OUTPUT"
 
 SIZES=(256 512 1024 2048 4096 8192 16384)
-KS=(3 5)
+KS=(3)
+
+# Add or remove stages here
+STAGES=(naive simd optimized)
 
 for K in "${KS[@]}"; do
     for SIZE in "${SIZES[@]}"; do
@@ -29,22 +32,31 @@ for K in "${KS[@]}"; do
 
         RESULT=$(./bin/conv all "$SIZE" "$SIZE" "$K" 2>/dev/null)
 
-        NAIVE=$(echo "$RESULT" | grep -E "^[[:space:]]*naive[[:space:]]+\(ref\)")
-        OPTIMIZED=$(echo "$RESULT" | grep -E "^[[:space:]]*optimized[[:space:]]")
+        for STAGE in "${STAGES[@]}"; do
 
-        NAIVE_CORRECT=$(echo "$NAIVE" | awk '{print $3}')
-        NAIVE_TIME=$(echo "$NAIVE" | awk '{print $4}')
-        NAIVE_GFLOPS=$(echo "$NAIVE" | awk '{print $5}')
-        NAIVE_SPEEDUP=$(echo "$NAIVE" | awk '{print $6}')
+            if [ "$STAGE" = "naive" ]; then
 
-        OPTIMIZED_CORRECT=$(echo "$OPTIMIZED" | awk '{print $2}')
-        OPTIMIZED_TIME=$(echo "$OPTIMIZED" | awk '{print $3}')
-        OPTIMIZED_GFLOPS=$(echo "$OPTIMIZED" | awk '{print $4}')
-        OPTIMIZED_SPEEDUP=$(echo "$OPTIMIZED" | awk '{print $5}')
+                LINE=$(echo "$RESULT" | grep -E "^[[:space:]]*naive[[:space:]]+\(ref\)")
 
-        echo "$K,$SIZE,naive,$NAIVE_CORRECT,$NAIVE_TIME,$NAIVE_GFLOPS,$NAIVE_SPEEDUP" >> "$OUTPUT"
+                CORRECT=$(echo "$LINE" | awk '{print $3}')
+                TIME=$(echo "$LINE" | awk '{print $4}')
+                GFLOPS=$(echo "$LINE" | awk '{print $5}')
+                SPEEDUP=$(echo "$LINE" | awk '{print $6}')
 
-        echo "$K,$SIZE,optimized,$OPTIMIZED_CORRECT,$OPTIMIZED_TIME,$OPTIMIZED_GFLOPS,$OPTIMIZED_SPEEDUP" >> "$OUTPUT"
+            else
+
+                LINE=$(echo "$RESULT" | grep -E "^[[:space:]]*$STAGE[[:space:]]")
+
+                CORRECT=$(echo "$LINE" | awk '{print $2}')
+                TIME=$(echo "$LINE" | awk '{print $3}')
+                GFLOPS=$(echo "$LINE" | awk '{print $4}')
+                SPEEDUP=$(echo "$LINE" | awk '{print $5}')
+
+            fi
+
+            echo "$K,$SIZE,$STAGE,$CORRECT,$TIME,$GFLOPS,$SPEEDUP" >> "$OUTPUT"
+
+        done
 
     done
 done

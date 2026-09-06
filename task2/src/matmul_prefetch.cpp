@@ -13,11 +13,11 @@
 // N. Passing ldb = N here will silently produce wrong results.
 
 #ifndef BLOCK_SIZE
-#define BLOCK_SIZE 32
+#define BLOCK_SIZE 128
 #endif
 
 #ifndef PREFETCH_DISTANCE
-#define PREFETCH_DISTANCE 8
+#define PREFETCH_DISTANCE 64
 #endif
 
 #ifndef CACHE_FILL_LEVEL

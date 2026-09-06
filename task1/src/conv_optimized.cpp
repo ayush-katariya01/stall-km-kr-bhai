@@ -1,5 +1,5 @@
 // conv_optimized.cpp  STAGE 5: PUT IT ALL TOGETHER
-// Hint: measure after every change. Not every "optimization" helps  let the numbers,
+// Hint: measure after every change. Not every "optimization" helps -- let the numbers,
 // not intuition, decide.
 
 #include <immintrin.h>
@@ -11,81 +11,99 @@ void conv_optimized(const float* in, float* out, const float* ker,
     const int p = K / 2;
     const int in_stride = W + 2 * p;
 
-    int m = 0;
-    int stride1, stride2;
-    __m256 c1,a1;
-    __m256 c2,a2;
-    __m256 c3,a3;
-    __m256 c4,a4;
+    int m1 = 0 , m2 = 0, m3 = 0, m4 = 0;
+    int stride1_a,stride1_b,stride1_c,stride1_d; 
+    int stride2;
+
+    __m256 c1, a1;
+    __m256 c2, a2;
+    __m256 c3, a3;
+    __m256 c4, a4;
     __m256 b;
 
+    const int tile_h = 88;
+    const int tile_w = 272;
+
     int oy;
-    for (oy = 0; oy + 3 < H; oy += 4) {
 
-        for (int ox = 0; ox < W; ox += 8) {
+    for (oy = 0; oy < H; oy += tile_h) {
 
-            c1 = _mm256_setzero_ps();
-            c2 = _mm256_setzero_ps();
-            c3 = _mm256_setzero_ps();
-            c4 = _mm256_setzero_ps();
+        for (int ox = 0; ox < W; ox += tile_w) {
 
-            for (int j = 0; j < K; j++) {
+            int tile_end_y = (oy + tile_h < H) ? (oy + tile_h) : H;
+            int tile_end_x = (ox + tile_w < W) ? (ox + tile_w) : W;
 
-                stride2 = j * K;
+            int ty;
 
-                for (int i = 0; i < K; i++) {
+            for (ty = oy; ty + 3 < tile_end_y; ty += 4) {
 
-                    b = _mm256_set1_ps(ker[stride2 + i]);
+                for (int tx = ox; tx + 7 < tile_end_x; tx += 8) {
 
-                    stride1 = (oy + j) * in_stride;
-                    a1 = _mm256_load_ps(&in[stride1 + ox + i]);
+                    c1 = _mm256_setzero_ps();
+                    c2 = _mm256_setzero_ps();
+                    c3 = _mm256_setzero_ps();
+                    c4 = _mm256_setzero_ps();
 
-                    stride1 = (oy + 1 + j) * in_stride;
-                    a2 = _mm256_load_ps(&in[stride1 + ox + i]);
+                    for (int j = 0; j < K; j++) {
 
-                    stride1 = (oy + 2 + j) * in_stride;
-                    a3 = _mm256_load_ps(&in[stride1 + ox + i]);
+                        stride2 = j * K;
 
-                    stride1 = (oy + 3 + j) * in_stride;
-                    a4 = _mm256_load_ps(&in[stride1 + ox + i]);
+                        stride1_a = (ty + j) * in_stride;
+                        stride1_b = stride1_a + in_stride;
+                        stride1_c = stride1_b + in_stride;
+                        stride1_d = stride1_c + in_stride; 
+                        
+                        for (int i = 0; i < K; i++) {
 
-                    c1 = _mm256_fmadd_ps(a1, b, c1);
-                    c2 = _mm256_fmadd_ps(a2, b, c2);
-                    c3 = _mm256_fmadd_ps(a3, b, c3);
-                    c4 = _mm256_fmadd_ps(a4, b, c4);
+                            b =  _mm256_set1_ps(ker[stride2 + i]);
+
+                            a1 = _mm256_load_ps(in + stride1_a + tx + i);
+                            a2 = _mm256_load_ps(in + stride1_b + tx + i);
+                            a3 = _mm256_load_ps(in + stride1_c + tx + i);
+                            a4 = _mm256_load_ps(in + stride1_d + tx + i);
+
+                            c1 = _mm256_fmadd_ps(a1, b, c1);
+                            c2 = _mm256_fmadd_ps(a2, b, c2);
+                            c3 = _mm256_fmadd_ps(a3, b, c3);
+                            c4 = _mm256_fmadd_ps(a4, b, c4);
+                        }
+                    }
+
+                    m1 = ty * W + tx;
+                    m2 = m1 + W;
+                    m3 = m2 + W;
+                    m4 = m3 + W;
+
+                    _mm256_store_ps(out + m1, c1);
+                    _mm256_store_ps(out + m2, c2);
+                    _mm256_store_ps(out + m3, c3);
+                    _mm256_store_ps(out + m4, c4);
                 }
             }
 
-            m = oy * W + ox;
+            // remaining rows inside the tile
+            for (; ty < tile_end_y; ty++) {
 
-            _mm256_store_ps(&out[m], c1);
-            _mm256_store_ps(&out[m + W], c2);
-            _mm256_store_ps(&out[m + 2 * W], c3);
-            _mm256_store_ps(&out[m + 3 * W], c4);
-        }
-    }
+                for (int tx = ox; tx < tile_end_x; tx += 8) {
 
-    // remaining rows
-    for (; oy < H; oy++) {
+                    c1 = _mm256_setzero_ps();
 
-        for (int ox = 0; ox < W; ox += 8) {
+                    for (int j = 0; j < K; j++) {
 
-            c1 = _mm256_setzero_ps();
+                        stride1_a = (ty + j) * in_stride;
+                        stride2 = j * K;
 
-            for (int j = 0; j < K; j++) {
+                        for (int i = 0; i < K; i++) {
 
-                stride1 = (oy + j) * in_stride;
-                stride2 = j * K;
+                            a1 = _mm256_load_ps(in + stride1_a + tx + i);
+                            b =  _mm256_set1_ps(ker[stride2 + i]);
+                            c1 = _mm256_fmadd_ps(a1, b, c1);
+                        }
+                    }
 
-                for (int i = 0; i < K; i++) {
-
-                    a1 = _mm256_load_ps(&in[stride1 + ox + i]);
-                    b = _mm256_set1_ps(ker[stride2 + i]);
-                    c1 = _mm256_fmadd_ps(a1, b, c1);
+                    _mm256_store_ps(out + ty * W + tx,c1);
                 }
             }
-
-            _mm256_store_ps(&out[oy * W + ox], c1);
         }
     }
 }

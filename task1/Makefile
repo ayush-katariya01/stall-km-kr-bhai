@@ -11,6 +11,10 @@
 
 CXX      := g++
 CXXFLAGS := -std=c++17 -O2 -fno-tree-vectorize -mavx2 -mfma -Iinclude -Wall
+
+BLOCK_SIZE ?= 32
+CXXFLAGS += -DBLOCK_SIZE=$(BLOCK_SIZE)
+
 LDFLAGS  :=
 
 BIN          := bin

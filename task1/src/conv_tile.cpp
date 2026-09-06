@@ -1,4 +1,7 @@
 // conv_tile.cpp  STAGE 3: CACHE TILING
+#ifndef BLOCK_SIZE
+#define BLOCK_SIZE 32
+#endif
 
 #include "convolution.h"
 
@@ -9,7 +12,7 @@ void conv_tile(const float* in, float* out, const float* ker,
     conv_naive(in, out, ker, H, W, K);*/
     const int p = K / 2;
     const int in_stride = W + 2 * p;
-    int b = 160; // output tile size, so input tile size will be b + k -1
+    int b = BLOCK_SIZE; // output tile size, so input tile size will be b + k -1
     for(int i=0;i< H;i=i+b){
         for(int j=0;j<W;j=j+b){
             //tile looping

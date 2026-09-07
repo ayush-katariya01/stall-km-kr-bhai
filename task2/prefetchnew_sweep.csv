@@ -1,0 +1,8 @@
+size,time_ms,gflops
+256,prefetch,yes
+512,prefetch,yes
+1024,prefetch,yes
+1536,prefetch,yes
+2048,prefetch,yes
+3072,prefetch,yes
+4096,prefetch,yes

@@ -23,7 +23,7 @@ SIZES=(256 512 1024 2048 4096 8192 16384)
 KS=(3)
 
 # Add or remove stages here
-STAGES=(naive simd optimized)
+STAGES=(naive simd tile optimized)
 
 for K in "${KS[@]}"; do
     for SIZE in "${SIZES[@]}"; do

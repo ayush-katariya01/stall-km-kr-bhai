@@ -13,6 +13,24 @@ CXX      := g++
 CXXFLAGS := -std=c++17 -O2 -fno-tree-vectorize -mavx2 -mfma -Iinclude -Wall
 LDFLAGS  :=
 
+# ------------------------------------------------------------
+# Prefetch tuning parameters
+# Can be overridden from command line:
+#
+# make BLOCK_SIZE=128 PREFETCH_DISTANCE=32 CACHE_FILL_LEVEL=2
+# ------------------------------------------------------------
+
+BLOCK_SIZE        ?= 128
+PREFETCH_DISTANCE ?= 64
+CACHE_FILL_LEVEL  ?= 1
+
+# Pass parameters to C++ as preprocessor macros
+CXXFLAGS += -DBLOCK_SIZE=$(BLOCK_SIZE)
+CXXFLAGS += -DPREFETCH_DISTANCE=$(PREFETCH_DISTANCE)
+CXXFLAGS += -DCACHE_FILL_LEVEL=$(CACHE_FILL_LEVEL)
+
+# ------------------------------------------------------------
+
 BIN          := bin
 MAIN         := src/main.cpp
 STUDENT_SRC  := src/matmul_naive.cpp src/matmul_simd.cpp src/matmul_prefetch.cpp \

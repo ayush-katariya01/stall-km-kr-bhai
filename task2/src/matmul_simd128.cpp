@@ -18,25 +18,25 @@ void matmul_simd(const float* A, const float* B, float* C,
     //     }
     // }
 
-    __m256 s,t,u;
+    __m128 s,t,u;
     int m=0;
     for (int i = 0; i < M; ++i) {
         const float* a=A+i*K;
         for (int j = 0; j < N; j++) {
-            u=_mm256_setzero_ps();
+            u=_mm_setzero_ps();
             float acc =0;
             // const float* a = A + static_cast<long>(i) * lda;
             // const float* b = B + static_cast<long>(j) * ldb;
 
             const float* b=B+j*K;
-            for (int p = 0; p < K; p=p+8) {
-                s=_mm256_load_ps(a+p);
-                t=_mm256_load_ps(b+p);
-                u=_mm256_add_ps(u,_mm256_mul_ps(s,t));
+            for (int p = 0; p < K; p=p+4) {
+                s=_mm_load_ps(a+p);
+                t=_mm_load_ps(b+p);
+                u=_mm_add_ps(u,_mm_mul_ps(s,t));
             }
-            float temp[8];
-            _mm256_store_ps(temp, u);
-            for(int x=0;x<8;x++){
+            float temp[4];
+            _mm_store_ps(temp, u);
+            for(int x=0;x<4;x++){
                 acc+=temp[x];
             }
             C[m++]=acc;
